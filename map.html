@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ENGO 551 Lab6</title> 
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+    <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        #map { height: 100%; width: 100%}
+    </style>
+
+</head>
+<body>
+
+    <div class="row">
+        <!--- Containers for map and user interactive buttons -->
+        <div class="col-10 min-vh-100">
+          <div id="map"></div>
+        </div>
+        <div class="col-2">
+            <button id="simplify" class="btn btn-primary" onClick="simplifyLine()" disabled>Simplify!</button>
+            <br>
+            <button id="clear" class="btn btn-primary" onClick="clearLine()" disabled>Clear Polyline</button>
+        </div>
+    </div>
+    
+    <script>
+        // map display
+        var map = L.map('map').setView([51.03, -114.066666], 10);
+        // tile layers
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                    maxZoom: 19,
+                                    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                                    }).addTo(map);
+
+        // variables to store editable leaflet.draw layers and simplified polyline layers
+        var editableLayers = new L.FeatureGroup();
+        var simpleLayers;
+        map.addLayer(editableLayers);
+        
+        // options for leaflet.draw
+        var options = {
+            position: 'topright',
+            draw: {
+                polyline: {
+                    shapeOptions: {
+                        color: 'blue',
+                        weight: 10
+                    }
+                },
+                polygon: false,
+                circle: false, // Turns off this drawing tool
+                rectangle: false,
+                marker: false,
+            },
+            edit: {
+                featureGroup: editableLayers, //REQUIRED!!
+                remove: false
+            }
+        };
+        
+        // adding draw control to map
+        var drawControl = new L.Control.Draw(options);
+        map.addControl(drawControl);
+        
+        // map handler for draw events
+        map.on(L.Draw.Event.CREATED, function (e) {
+            var type = e.layerType,
+                layer = e.layer;
+            
+            // only adding polylines as a layer on the map.     
+            if (type=='polyline'){
+                editableLayers.addLayer(layer);
+                // enable buttons
+                document.getElementById('simplify').removeAttribute('disabled')
+                document.getElementById('clear').removeAttribute('disabled')
+            }
+        
+            
+        });
+
+        // onclick listener for simplify button
+        // uses turf.simplify to simplify the polyline the user has drawn
+        function simplifyLine(){
+            geojson_layers=editableLayers.toGeoJSON();
+            simplified=turf.simplify(geojson_layers)
+            editableLayers.clearLayers();
+            simpleLayers=L.geoJSON(simplified)
+            simpleLayers.addTo(map)
+        }
+
+        // onclick listener for clear polyline button
+        // clears all lines drawn by the user from the map
+        function clearLine(){
+            if (simpleLayers){
+                simpleLayers.clearLayers();
+                document.getElementById('simplify').setAttribute('disabled', 'disabled')
+                document.getElementById('clear').setAttribute('disabled', 'disabled')
+            }else if (typeof simpleLayers == 'undefined'){
+                editableLayers.clearLayers();
+                document.getElementById('simplify').setAttribute('disabled', 'disabled')
+                document.getElementById('clear').setAttribute('disabled', 'disabled')
+            }
+                
+            
+            
+        }
+    </script>
+    
+
+</body>
